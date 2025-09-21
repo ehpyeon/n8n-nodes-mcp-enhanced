@@ -158,14 +158,14 @@ export class McpClient implements INodeType {
 			{
 				displayName: 'Tool Name',
 				name: 'toolName',
-				type: 'json',
+				type: 'string',
 				required: true,
 				displayOptions: {
 					show: {
 						operation: ['executeTool'],
 					},
 				},
-				default: '{}',
+				default: '',
 				description: 'Name of the tool to execute',
 			},
 			{
@@ -543,21 +543,9 @@ export class McpClient implements INodeType {
 						let parsedParams: any;
 						let directToolName: string | null = null;
 
-						// Parse Tool Name field (AI Agent can set this directly)
-						if (rawToolName !== undefined && rawToolName !== null) {
-							if (typeof rawToolName === 'string' && rawToolName.trim() !== '') {
-								directToolName = rawToolName.trim();
-							} else if (typeof rawToolName === 'object' && rawToolName) {
-								// Handle json object in Tool Name field
-								const toolNameObj = rawToolName as any;
-								if (toolNameObj.tool_name) {
-									directToolName = toolNameObj.tool_name;
-								} else if (toolNameObj.name) {
-									directToolName = toolNameObj.name;
-								} else if (typeof toolNameObj === 'string') {
-									directToolName = toolNameObj;
-								}
-							}
+						// Parse Tool Name field (AI Agent can set this directly as string)
+						if (rawToolName !== undefined && rawToolName !== null && typeof rawToolName === 'string' && rawToolName.trim() !== '') {
+							directToolName = rawToolName.trim();
 						}
 
 						// Parse Tool Parameters field
