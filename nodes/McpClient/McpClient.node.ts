@@ -158,12 +158,9 @@ export class McpClient implements INodeType {
 				description: 'URI of the resource to read',
 			},
 			{
-				displayName: 'Tool Name or ID',
+				displayName: 'Tool Name',
 				name: 'toolName',
-				type: 'options',
-				typeOptions: {
-					loadOptionsMethod: 'getAvailableTools',
-				},
+				type: 'string',
 				required: true,
 				displayOptions: {
 					show: {
@@ -171,20 +168,7 @@ export class McpClient implements INodeType {
 					},
 				},
 				default: '',
-				description: 'Select from available MCP tools or enter custom tool name. Choose from the list, or specify an ID using an <a href="https://docs.n8n.io/code/expressions/">expression</a>.',
-			},
-			{
-				displayName: 'Custom Tool Name',
-				name: 'customToolName',
-				type: 'string',
-				displayOptions: {
-					show: {
-						operation: ['executeTool'],
-						toolName: ['__custom__'],
-					},
-				},
-				default: '',
-				description: 'Enter custom tool name if not available in the list above',
+				description: 'Name of the tool to execute. AI Agent can auto-select from available MCP tools.',
 			},
 			{
 				displayName: 'Tool Parameters',
@@ -327,7 +311,7 @@ export class McpClient implements INodeType {
 						: Object.values(availableTools?.tools || {});
 
 					const options: INodePropertyOptions[] = toolsList.map((tool: any) => ({
-						name: `${tool.name}${tool.description ? ` - ${tool.description}` : ''}`,
+						name: tool.name,
 						value: tool.name,
 					}));
 
@@ -687,24 +671,18 @@ export class McpClient implements INodeType {
 					let toolParams;
 
 					try {
-						// Get tool name from either dropdown selection or custom input
+						// Get tool name directly (AI Agent can set this)
 						const rawToolName = this.getNodeParameter('toolName', 0);
-						const rawCustomToolName = this.getNodeParameter('customToolName', 0, '');
 						const rawParams = this.getNodeParameter('toolParameters', 0);
 						
 						this.logger.debug(`Raw tool name: ${JSON.stringify(rawToolName)}`);
-						this.logger.debug(`Raw custom tool name: ${JSON.stringify(rawCustomToolName)}`);
 						this.logger.debug(`Raw tool parameters: ${JSON.stringify(rawParams)}`);
 
 						let parsedParams: any;
 						let directToolName: string | null = null;
 
-						// Parse Tool Name field (options dropdown or custom input)
-						if (rawToolName === '__custom__' && rawCustomToolName && typeof rawCustomToolName === 'string' && rawCustomToolName.trim() !== '') {
-							// Use custom tool name when "__custom__" is selected
-							directToolName = rawCustomToolName.trim();
-						} else if (rawToolName !== undefined && rawToolName !== null && typeof rawToolName === 'string' && rawToolName.trim() !== '' && rawToolName !== '__custom__') {
-							// Use selected tool name from dropdown
+						// Parse Tool Name field (AI Agent can set this directly as string)
+						if (rawToolName !== undefined && rawToolName !== null && typeof rawToolName === 'string' && rawToolName.trim() !== '') {
 							directToolName = rawToolName.trim();
 						}
 
