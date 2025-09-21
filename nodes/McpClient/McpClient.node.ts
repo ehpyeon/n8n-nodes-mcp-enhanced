@@ -158,9 +158,12 @@ export class McpClient implements INodeType {
 				description: 'URI of the resource to read',
 			},
 			{
-				displayName: 'Tool Name',
+				displayName: 'Tool Name or ID',
 				name: 'toolName',
-				type: 'string',
+				type: 'options',
+				typeOptions: {
+					loadOptionsMethod: 'getAvailableTools',
+				},
 				required: true,
 				displayOptions: {
 					show: {
@@ -168,7 +171,7 @@ export class McpClient implements INodeType {
 					},
 				},
 				default: '',
-				description: 'Name of the tool to execute. AI Agent can auto-select from available MCP tools.',
+				description: 'Choose from the list, or specify an ID using an <a href="https://docs.n8n.io/code/expressions/">expression</a>.',
 			},
 			{
 				displayName: 'Tool Parameters',
