@@ -159,7 +159,6 @@ export class McpClient implements INodeType {
 				displayName: 'Tool Name',
 				name: 'toolName',
 				type: 'string',
-				noDataExpression: true,
 				required: true,
 				displayOptions: {
 					show: {
@@ -173,7 +172,6 @@ export class McpClient implements INodeType {
 				displayName: 'Tool Parameters',
 				name: 'toolParameters',
 				type: 'json',
-				noDataExpression: true,
 				required: true,
 				displayOptions: {
 					show: {
