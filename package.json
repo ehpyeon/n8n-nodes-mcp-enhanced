@@ -1,6 +1,6 @@
 {
 	"name": "n8n-nodes-mcp-enhanced",
-	"version": "1.0.0",
+	"version": "1.0.1",
 	"description": "Enhanced MCP nodes for n8n with AI Agent support",
 	"keywords": [
 		"n8n-community-node-package",

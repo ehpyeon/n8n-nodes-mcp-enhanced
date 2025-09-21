@@ -159,6 +159,7 @@ export class McpClient implements INodeType {
 				displayName: 'Tool Name',
 				name: 'toolName',
 				type: 'json',
+				noDataExpression: true,
 				required: true,
 				displayOptions: {
 					show: {
@@ -584,7 +585,10 @@ export class McpClient implements INodeType {
 								if (typeof rawToolName === 'string') {
 									toolName = rawToolName;
 								} else if (typeof rawToolName === 'object' && rawToolName) {
-									toolName = rawToolName.toolName || rawToolName.name || '';
+									const toolNameObj = rawToolName as any;
+									toolName = toolNameObj.toolName || toolNameObj.name || '';
+								} else {
+									toolName = '';
 								}
 							} catch {
 								throw new NodeOperationError(this.getNode(), 'Tool name is required');
