@@ -1,6 +1,8 @@
 import {
 	IExecuteFunctions,
+	ILoadOptionsFunctions,
 	INodeExecutionData,
+	INodePropertyOptions,
 	INodeType,
 	INodeTypeDescription,
 	NodeConnectionType,
@@ -158,7 +160,10 @@ export class McpClient implements INodeType {
 			{
 				displayName: 'Tool Name',
 				name: 'toolName',
-				type: 'string',
+				type: 'options',
+				typeOptions: {
+					loadOptionsMethod: 'getAvailableTools',
+				},
 				required: true,
 				displayOptions: {
 					show: {
@@ -166,7 +171,21 @@ export class McpClient implements INodeType {
 					},
 				},
 				default: '',
-				description: 'Name of the tool to execute',
+				description: 'Select from available MCP tools or enter custom tool name',
+			},
+			{
+				displayName: 'Custom Tool Name',
+				name: 'customToolName',
+				type: 'string',
+				required: false,
+				displayOptions: {
+					show: {
+						operation: ['executeTool'],
+						toolName: ['__custom__'],
+					},
+				},
+				default: '',
+				description: 'Enter custom tool name if not available in the list above',
 			},
 			{
 				displayName: 'Tool Parameters',
@@ -195,6 +214,142 @@ export class McpClient implements INodeType {
 				description: 'Name of the prompt template to get',
 			},
 		],
+	};
+
+	methods = {
+		loadOptions: {
+			async getAvailableTools(this: ILoadOptionsFunctions): Promise<INodePropertyOptions[]> {
+				try {
+					// Get connection type and setup transport (same as execute method)
+					let connectionType = 'cmd';
+					try {
+						connectionType = this.getNodeParameter('connectionType', 0) as string;
+					} catch (error) {
+						// Default to 'cmd' if connectionType parameter doesn't exist
+					}
+
+					let transport: Transport | undefined;
+
+					if (connectionType === 'http') {
+						const httpCredentials = await this.getCredentials('mcpClientHttpApi');
+						const { StreamableHTTPClientTransport } = await import('@modelcontextprotocol/sdk/client/streamableHttp.js');
+						const httpStreamUrl = httpCredentials.httpStreamUrl as string;
+						
+						let headers: Record<string, string> = {};
+						if (httpCredentials.headers) {
+							const headerLines = (httpCredentials.headers as string).split('\n');
+							for (const line of headerLines) {
+								const equalsIndex = line.indexOf('=');
+								if (equalsIndex > 0) {
+									const name = line.substring(0, equalsIndex).trim();
+									const value = line.substring(equalsIndex + 1).trim();
+									if (name && value !== undefined) {
+										headers[name] = value;
+									}
+								}
+							}
+						}
+
+						transport = new StreamableHTTPClientTransport(
+							new URL(httpStreamUrl),
+							{ requestInit: { headers } }
+						);
+					} else if (connectionType === 'sse') {
+						const sseCredentials = await this.getCredentials('mcpClientSseApi');
+						const { SSEClientTransport } = await import('@modelcontextprotocol/sdk/client/sse.js');
+						const sseUrl = sseCredentials.sseUrl as string;
+						
+						let headers: Record<string, string> = {};
+						if (sseCredentials.headers) {
+							const headerLines = (sseCredentials.headers as string).split('\n');
+							for (const line of headerLines) {
+								const equalsIndex = line.indexOf('=');
+								if (equalsIndex > 0) {
+									const name = line.substring(0, equalsIndex).trim();
+									const value = line.substring(equalsIndex + 1).trim();
+									if (name && value !== undefined) {
+										headers[name] = value;
+									}
+								}
+							}
+						}
+
+						transport = new SSEClientTransport(new URL(sseUrl));
+					} else {
+						// Use stdio transport (default)
+						const cmdCredentials = await this.getCredentials('mcpClientApi');
+						const env: Record<string, string> = { PATH: process.env.PATH || '' };
+						
+						if (cmdCredentials.environments) {
+							const envLines = (cmdCredentials.environments as string).split('\n');
+							for (const line of envLines) {
+								const equalsIndex = line.indexOf('=');
+								if (equalsIndex > 0) {
+									const name = line.substring(0, equalsIndex).trim();
+									const value = line.substring(equalsIndex + 1).trim();
+									if (name && value !== undefined) {
+										env[name] = value;
+									}
+								}
+							}
+						}
+
+						for (const key in process.env) {
+							if (key.startsWith('MCP_') && process.env[key]) {
+								const envName = key.substring(4);
+								env[envName] = process.env[key] as string;
+							}
+						}
+
+						transport = new StdioClientTransport({
+							command: cmdCredentials.command as string,
+							args: (cmdCredentials.args as string)?.split(' ') || [],
+							env: env,
+						});
+					}
+
+					if (!transport) {
+						return [{ name: 'No transport available', value: '__custom__' }];
+					}
+
+					const client = new Client(
+						{ name: `${McpClient.name}-client`, version: '1.0.0' },
+						{ capabilities: { prompts: {}, resources: {}, tools: {} } }
+					);
+
+					await client.connect(transport);
+					const availableTools = await client.listTools();
+					await client.close();
+
+					const toolsList = Array.isArray(availableTools)
+						? availableTools
+						: Array.isArray(availableTools?.tools)
+						? availableTools.tools
+						: Object.values(availableTools?.tools || {});
+
+					const options: INodePropertyOptions[] = toolsList.map((tool: any) => ({
+						name: `${tool.name}${tool.description ? ` - ${tool.description}` : ''}`,
+						value: tool.name,
+					}));
+
+					// Add custom option at the end
+					options.push({
+						name: 'Custom Tool Name...',
+						value: '__custom__',
+					});
+
+					return options;
+				} catch (error) {
+					// Return custom option if unable to fetch tools
+					return [
+						{
+							name: 'Unable to fetch tools - Enter custom name',
+							value: '__custom__',
+						},
+					];
+				}
+			},
+		},
 	};
 
 	async execute(this: IExecuteFunctions): Promise<INodeExecutionData[][]> {
@@ -533,18 +688,24 @@ export class McpClient implements INodeType {
 					let toolParams;
 
 					try {
-						// First, try to get tool name from Tool Name field (AI Agent can set this directly)
+						// Get tool name from either dropdown selection or custom input
 						const rawToolName = this.getNodeParameter('toolName', 0);
+						const rawCustomToolName = this.getNodeParameter('customToolName', 0, '');
 						const rawParams = this.getNodeParameter('toolParameters', 0);
 						
 						this.logger.debug(`Raw tool name: ${JSON.stringify(rawToolName)}`);
+						this.logger.debug(`Raw custom tool name: ${JSON.stringify(rawCustomToolName)}`);
 						this.logger.debug(`Raw tool parameters: ${JSON.stringify(rawParams)}`);
 
 						let parsedParams: any;
 						let directToolName: string | null = null;
 
-						// Parse Tool Name field (AI Agent can set this directly as string)
-						if (rawToolName !== undefined && rawToolName !== null && typeof rawToolName === 'string' && rawToolName.trim() !== '') {
+						// Parse Tool Name field (options dropdown or custom input)
+						if (rawToolName === '__custom__' && rawCustomToolName && typeof rawCustomToolName === 'string' && rawCustomToolName.trim() !== '') {
+							// Use custom tool name when "__custom__" is selected
+							directToolName = rawCustomToolName.trim();
+						} else if (rawToolName !== undefined && rawToolName !== null && typeof rawToolName === 'string' && rawToolName.trim() !== '' && rawToolName !== '__custom__') {
+							// Use selected tool name from dropdown
 							directToolName = rawToolName.trim();
 						}
 
