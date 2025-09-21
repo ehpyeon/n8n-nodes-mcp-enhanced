@@ -174,6 +174,20 @@ export class McpClient implements INodeType {
 				description: 'Choose from the list, or specify an ID using an <a href="https://docs.n8n.io/code/expressions/">expression</a>',
 			},
 			{
+				displayName: 'Custom Tool Name',
+				name: 'toolNameCustom',
+				type: 'string',
+				required: true,
+				displayOptions: {
+					show: {
+						operation: ['executeTool'],
+						toolName: ['__custom__'],
+					},
+				},
+				default: '',
+				description: 'Enter a custom tool name when selecting "Custom Tool Name..." above',
+			},
+			{
 				displayName: 'Tool Parameters',
 				name: 'toolParameters',
 				type: 'json',
@@ -706,7 +720,13 @@ export class McpClient implements INodeType {
 						}
 
 						// Use toolName directly (AI Agent or user can set this)
-						if (!toolName || toolName.trim() === '') {
+					if (toolName === '__custom__') {
+						const customName = this.getNodeParameter('toolNameCustom', 0) as string;
+						if (!customName || customName.trim() === '') {
+							throw new NodeOperationError(this.getNode(), 'Custom tool name is required');
+						}
+						toolName = customName.trim();
+					} else if (!toolName || toolName.trim() === '') {
 							// Fallback: try to extract from nested Tool_Parameters structure (legacy)
 							if (Array.isArray(parsedParams) && parsedParams.length > 0 && parsedParams[0].Tool_Parameters) {
 								const toolData = parsedParams[0].Tool_Parameters;

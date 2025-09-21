@@ -121,6 +121,15 @@ With the latest improvements, AI Agents can now:
 - **Intelligent parsing**: Automatic handling of different input formats
 - **Better UX**: Cleaner separation between tool selection and parameters
 
+### Custom Tool Name (Hybrid input)
+- **When to use**: If the desired tool is not listed, or you want the AI to provide the exact name as text
+- **How it works**:
+  1. In `Tool Name or ID`, choose `Custom Tool Name...` (listed after server tools)
+  2. A new field `Custom Tool Name` appears
+  3. Enter the exact tool name (or let the AI fill it when used as a tool)
+  4. Provide `Tool Parameters` as JSON
+- **Validation**: The custom name is validated against the MCP server's available tools before execution. If it doesn't exist, the node returns a helpful error listing available tools.
+
 ### Example AI Agent Prompt
 ```
 Search for recent papers about "transformer architecture" using arXiv, 
