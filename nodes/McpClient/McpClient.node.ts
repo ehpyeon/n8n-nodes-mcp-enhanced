@@ -158,14 +158,14 @@ export class McpClient implements INodeType {
 			{
 				displayName: 'Tool Name',
 				name: 'toolName',
-				type: 'string',
+				type: 'json',
 				required: true,
 				displayOptions: {
 					show: {
 						operation: ['executeTool'],
 					},
 				},
-				default: '',
+				default: '{}',
 				description: 'Name of the tool to execute',
 			},
 			{
