@@ -12,7 +12,8 @@
       "Bash(npm whoami:*)",
       "Bash(npm publish:*)",
       "WebSearch",
-      "mcp__mcp-router__fetch"
+      "mcp__mcp-router__fetch",
+      "Bash(npm run lint:*)"
     ],
     "deny": [],
     "ask": []

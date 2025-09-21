@@ -158,7 +158,7 @@ export class McpClient implements INodeType {
 				description: 'URI of the resource to read',
 			},
 			{
-				displayName: 'Tool Name',
+				displayName: 'Tool Name or ID',
 				name: 'toolName',
 				type: 'options',
 				typeOptions: {
@@ -171,13 +171,12 @@ export class McpClient implements INodeType {
 					},
 				},
 				default: '',
-				description: 'Select from available MCP tools or enter custom tool name',
+				description: 'Select from available MCP tools or enter custom tool name. Choose from the list, or specify an ID using an <a href="https://docs.n8n.io/code/expressions/">expression</a>.',
 			},
 			{
 				displayName: 'Custom Tool Name',
 				name: 'customToolName',
 				type: 'string',
-				required: false,
 				displayOptions: {
 					show: {
 						operation: ['executeTool'],
@@ -309,7 +308,7 @@ export class McpClient implements INodeType {
 					}
 
 					if (!transport) {
-						return [{ name: 'No transport available', value: '__custom__' }];
+						return [{ name: 'No Transport Available', value: '__custom__' }];
 					}
 
 					const client = new Client(
@@ -343,7 +342,7 @@ export class McpClient implements INodeType {
 					// Return custom option if unable to fetch tools
 					return [
 						{
-							name: 'Unable to fetch tools - Enter custom name',
+							name: 'Unable to Fetch Tools - Enter Custom Name',
 							value: '__custom__',
 						},
 					];
