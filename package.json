@@ -1,7 +1,7 @@
 {
-	"name": "n8n-nodes-mcp",
-	"version": "0.1.29",
-	"description": "MCP nodes for n8n ",
+	"name": "n8n-nodes-mcp-enhanced",
+	"version": "1.0.0",
+	"description": "Enhanced MCP nodes for n8n with AI Agent support",
 	"keywords": [
 		"n8n-community-node-package",
 		"mcp",
@@ -9,17 +9,19 @@
 		"mcp-client-node",
 		"mcp-client-n8n",
 		"mcp-client-n8n-node",
-		"mcp-client-n8n-node-package"
+		"mcp-client-n8n-node-package",
+		"ai-agent-support",
+		"enhanced"
 	],
 	"license": "MIT",
 	"homepage": "",
 	"author": {
-		"name": "Jd Fiscus",
-		"email": "jd@nerding.io"
+		"name": "Euihyeon Pyeon",
+		"email": "euihyeon.pyeon@gmail.com"
 	},
 	"repository": {
 		"type": "git",
-		"url": "https://github.com/nerding-io/n8n-nodes-mcp.git"
+		"url": "https://github.com/ehpyeon/n8n-nodes-mcp-enhanced.git"
 	},
 	"main": "index.js",
 	"scripts": {

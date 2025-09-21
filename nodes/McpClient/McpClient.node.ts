@@ -158,14 +158,14 @@ export class McpClient implements INodeType {
 			{
 				displayName: 'Tool Name',
 				name: 'toolName',
-				type: 'string',
+				type: 'json',
 				required: true,
 				displayOptions: {
 					show: {
 						operation: ['executeTool'],
 					},
 				},
-				default: '',
+				default: '{}',
 				description: 'Name of the tool to execute',
 			},
 			{
@@ -529,37 +529,72 @@ export class McpClient implements INodeType {
 				}
 
 				case 'executeTool': {
-					const toolName = this.getNodeParameter('toolName', 0) as string;
+					let toolName: string;
 					let toolParams;
 
 					try {
 						const rawParams = this.getNodeParameter('toolParameters', 0);
 						this.logger.debug(`Raw tool parameters: ${JSON.stringify(rawParams)}`);
 
+						let parsedParams: any;
+
 						// Handle different parameter types
 						if (rawParams === undefined || rawParams === null) {
 							// Handle null/undefined case
-							toolParams = {};
+							parsedParams = {};
 						} else if (typeof rawParams === 'string') {
 							// Handle string input (typical direct node usage)
 							if (!rawParams || rawParams.trim() === '') {
-								toolParams = {};
+								parsedParams = {};
 							} else {
-								toolParams = JSON.parse(rawParams);
+								parsedParams = JSON.parse(rawParams);
 							}
 						} else if (typeof rawParams === 'object') {
 							// Handle object input (when used as a tool in AI Agent)
-							toolParams = rawParams;
+							parsedParams = rawParams;
 						} else {
 							// Try to convert other types to object
 							try {
-								toolParams = JSON.parse(JSON.stringify(rawParams));
+								parsedParams = JSON.parse(JSON.stringify(rawParams));
 							} catch (parseError) {
 								throw new NodeOperationError(
 									this.getNode(),
 									`Invalid parameter type: ${typeof rawParams}`,
 								);
 							}
+						}
+
+						// Handle AI Agent format: [{Tool_Parameters: {tool_name, parameters}}]
+						if (Array.isArray(parsedParams) && parsedParams.length > 0 && parsedParams[0].Tool_Parameters) {
+							const toolData = parsedParams[0].Tool_Parameters;
+							toolName = toolData.tool_name;
+							toolParams = toolData.parameters || {};
+						} 
+						// Handle direct format: {tool_name, parameters} or {Tool_Parameters: {tool_name, parameters}}
+						else if (parsedParams.Tool_Parameters) {
+							const toolData = parsedParams.Tool_Parameters;
+							toolName = toolData.tool_name;
+							toolParams = toolData.parameters || {};
+						}
+						// Handle legacy format: direct parameters object
+						else {
+							// Try to get tool name from Tool Name field (backward compatibility)
+							try {
+								const rawToolName = this.getNodeParameter('toolName', 0);
+								if (typeof rawToolName === 'string') {
+									toolName = rawToolName;
+								} else if (typeof rawToolName === 'object' && rawToolName) {
+									toolName = rawToolName.toolName || rawToolName.name || '';
+								}
+							} catch {
+								throw new NodeOperationError(this.getNode(), 'Tool name is required');
+							}
+							toolParams = parsedParams;
+						}
+
+						// Validate tool name
+						if (!toolName || typeof toolName !== 'string') {
+							throw new NodeOperationError(this.getNode(), 'Tool name must be a non-empty string');
 						}
 
 						// Ensure toolParams is an object
