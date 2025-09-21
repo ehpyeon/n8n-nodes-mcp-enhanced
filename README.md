@@ -13,15 +13,25 @@ MCP is a protocol that enables AI models to interact with external tools and dat
 ## What's Enhanced
 
 ### AI Agent Compatibility
-- **Automatic Tool Selection**: AI Agents can now automatically select tools by name using JSON parameters
-- **Structured Parameters**: Both tool names and parameters are JSON-compatible for seamless AI integration
+- **Direct Field Control**: AI Agents can now directly control both Tool Name and Tool Parameters fields
+- **Automatic Tool Selection**: Tool Name field now supports AI Agent "let the model define this parameter" feature
+- **Flexible Parameter Formats**: Support multiple input formats for maximum compatibility
 - **Backward Compatibility**: All existing workflows continue to work unchanged
 
 ### Enhanced Parameter Handling
-The node now supports multiple parameter formats:
+The node now supports multiple parameter formats with intelligent parsing:
+
 ```json
-// AI Agent format (recommended)
-[{
+// AI Agent Direct Control (v1.0.5+, recommended)
+Tool Name: "search_arxiv"                    // AI Agent sets this directly
+Tool Parameters: {                           // AI Agent sets this directly
+  "query": "artificial intelligence",
+  "max_results": 10
+}
+
+// Nested format (legacy, still supported)
+Tool Name: ""                                // Can be empty
+Tool Parameters: [{
   "Tool_Parameters": {
     "tool_name": "search_arxiv", 
     "parameters": {
@@ -31,18 +41,21 @@ The node now supports multiple parameter formats:
   }
 }]
 
-// Direct format
-{
+// Direct nested format
+Tool Name: ""                                // Can be empty  
+Tool Parameters: {
   "Tool_Parameters": {
     "tool_name": "search_arxiv",
     "parameters": {...}
   }
 }
-
-// Legacy format (still supported)
-Tool Name: "search_arxiv"
-Tool Parameters: {"query": "...", "max_results": 10}
 ```
+
+### Parsing Priority Logic
+1. **Tool Name field priority**: If Tool Name is set, it takes precedence
+2. **Parameter extraction**: Tool Parameters are parsed as direct parameters
+3. **Nested fallback**: If Tool Name is empty, extract from nested Tool_Parameters structure
+4. **Legacy support**: Maintains compatibility with all previous formats
 
 ## Installation
 
@@ -99,7 +112,14 @@ export N8N_COMMUNITY_PACKAGES_ALLOW_TOOL_USAGE=true
 1. Add MCP Client node to your workflow
 2. Configure credentials for your MCP server
 3. In AI Agent node, enable MCP Client as a tool
-4. AI Agent will automatically handle tool selection and parameter formatting
+4. AI Agent will automatically control both Tool Name and Tool Parameters fields
+
+### v1.0.5+ Enhanced AI Agent Experience
+With the latest improvements, AI Agents can now:
+- **Directly set Tool Name**: "let the model define this parameter" option available
+- **Directly set Tool Parameters**: Full control over parameter structure
+- **Intelligent parsing**: Automatic handling of different input formats
+- **Better UX**: Cleaner separation between tool selection and parameters
 
 ### Example AI Agent Prompt
 ```
@@ -108,10 +128,10 @@ then summarize the top 3 results.
 ```
 
 The AI Agent will automatically:
-1. Select the appropriate MCP tool
-2. Format parameters correctly
-3. Execute the search
-4. Process results
+1. Set Tool Name to "search_arxiv" (directly in Tool Name field)
+2. Set Tool Parameters to {"query": "transformer architecture", "max_results": 3}
+3. Execute the search with proper MCP protocol handling
+4. Process and return results
 
 ## Environment Variables
 
