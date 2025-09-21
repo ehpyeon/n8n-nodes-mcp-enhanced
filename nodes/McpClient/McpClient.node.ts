@@ -533,27 +533,45 @@ export class McpClient implements INodeType {
 					let toolParams;
 
 					try {
+						// First, try to get tool name from Tool Name field (AI Agent can set this directly)
+						const rawToolName = this.getNodeParameter('toolName', 0);
 						const rawParams = this.getNodeParameter('toolParameters', 0);
+						
+						this.logger.debug(`Raw tool name: ${JSON.stringify(rawToolName)}`);
 						this.logger.debug(`Raw tool parameters: ${JSON.stringify(rawParams)}`);
 
 						let parsedParams: any;
+						let directToolName: string | null = null;
 
-						// Handle different parameter types
+						// Parse Tool Name field (AI Agent can set this directly)
+						if (rawToolName !== undefined && rawToolName !== null) {
+							if (typeof rawToolName === 'string' && rawToolName.trim() !== '') {
+								directToolName = rawToolName.trim();
+							} else if (typeof rawToolName === 'object' && rawToolName) {
+								// Handle json object in Tool Name field
+								const toolNameObj = rawToolName as any;
+								if (toolNameObj.tool_name) {
+									directToolName = toolNameObj.tool_name;
+								} else if (toolNameObj.name) {
+									directToolName = toolNameObj.name;
+								} else if (typeof toolNameObj === 'string') {
+									directToolName = toolNameObj;
+								}
+							}
+						}
+
+						// Parse Tool Parameters field
 						if (rawParams === undefined || rawParams === null) {
-							// Handle null/undefined case
 							parsedParams = {};
 						} else if (typeof rawParams === 'string') {
-							// Handle string input (typical direct node usage)
 							if (!rawParams || rawParams.trim() === '') {
 								parsedParams = {};
 							} else {
 								parsedParams = JSON.parse(rawParams);
 							}
 						} else if (typeof rawParams === 'object') {
-							// Handle object input (when used as a tool in AI Agent)
 							parsedParams = rawParams;
 						} else {
-							// Try to convert other types to object
 							try {
 								parsedParams = JSON.parse(JSON.stringify(rawParams));
 							} catch (parseError) {
@@ -564,35 +582,39 @@ export class McpClient implements INodeType {
 							}
 						}
 
-						// Handle AI Agent format: [{Tool_Parameters: {tool_name, parameters}}]
-						if (Array.isArray(parsedParams) && parsedParams.length > 0 && parsedParams[0].Tool_Parameters) {
-							const toolData = parsedParams[0].Tool_Parameters;
-							toolName = toolData.tool_name;
-							toolParams = toolData.parameters || {};
-						} 
-						// Handle direct format: {tool_name, parameters} or {Tool_Parameters: {tool_name, parameters}}
-						else if (parsedParams.Tool_Parameters) {
-							const toolData = parsedParams.Tool_Parameters;
-							toolName = toolData.tool_name;
-							toolParams = toolData.parameters || {};
-						}
-						// Handle legacy format: direct parameters object
-						else {
-							// Try to get tool name from Tool Name field (backward compatibility)
-							try {
-								const rawToolName = this.getNodeParameter('toolName', 0);
-								if (typeof rawToolName === 'string') {
-									toolName = rawToolName;
-								} else if (typeof rawToolName === 'object' && rawToolName) {
-									const toolNameObj = rawToolName as any;
-									toolName = toolNameObj.toolName || toolNameObj.name || '';
-								} else {
-									toolName = '';
-								}
-							} catch {
-								throw new NodeOperationError(this.getNode(), 'Tool name is required');
+						// Determine tool name and parameters based on priority:
+						// 1. Direct Tool Name field (AI Agent can set this)
+						// 2. Nested format in Tool Parameters
+						// 3. Legacy fallback
+
+						if (directToolName) {
+							// AI Agent set Tool Name directly - use it with Tool Parameters as direct params
+							toolName = directToolName;
+							
+							// If Tool Parameters contains nested structure, extract just the parameters
+							if (Array.isArray(parsedParams) && parsedParams.length > 0 && parsedParams[0].Tool_Parameters) {
+								const toolData = parsedParams[0].Tool_Parameters;
+								toolParams = toolData.parameters || {};
+							} else if (parsedParams.Tool_Parameters) {
+								const toolData = parsedParams.Tool_Parameters;
+								toolParams = toolData.parameters || {};
+							} else {
+								// Use Tool Parameters directly
+								toolParams = parsedParams;
 							}
-							toolParams = parsedParams;
+						} else {
+							// Fallback to nested format extraction (legacy behavior)
+							if (Array.isArray(parsedParams) && parsedParams.length > 0 && parsedParams[0].Tool_Parameters) {
+								const toolData = parsedParams[0].Tool_Parameters;
+								toolName = toolData.tool_name;
+								toolParams = toolData.parameters || {};
+							} else if (parsedParams.Tool_Parameters) {
+								const toolData = parsedParams.Tool_Parameters;
+								toolName = toolData.tool_name;
+								toolParams = toolData.parameters || {};
+							} else {
+								throw new NodeOperationError(this.getNode(), 'Tool name is required. Please set it in the Tool Name field or provide nested Tool_Parameters structure.');
+							}
 						}
 
 						// Validate tool name
