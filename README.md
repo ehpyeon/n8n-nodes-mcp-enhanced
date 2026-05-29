@@ -1,144 +1,181 @@
 # n8n-nodes-mcp-enhanced
 
-> **Enhanced MCP Client for n8n with AI Agent Support**
+[![npm version](https://img.shields.io/npm/v/n8n-nodes-mcp-enhanced?color=EA4B71&label=npm&logo=npm)](https://www.npmjs.com/package/n8n-nodes-mcp-enhanced)
+[![npm downloads](https://img.shields.io/npm/dw/n8n-nodes-mcp-enhanced?color=EA4B71&logo=npm)](https://www.npmjs.com/package/n8n-nodes-mcp-enhanced)
+[![n8n community node](https://img.shields.io/badge/n8n-community%20node-EA4B71?logo=n8n&logoColor=white)](https://docs.n8n.io/integrations/community-nodes/)
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE.md)
 
-This is an enhanced version of the n8n community node that lets you interact with Model Context Protocol (MCP) servers in your n8n workflows, with special optimizations for AI Agent integration.
+> **An enhanced [Model Context Protocol (MCP)](https://modelcontextprotocol.io/) client node for [n8n](https://n8n.io/) — built so AI Agents can drive MCP tools with zero manual wiring.**
 
-**Key Enhancement**: Tool Name and Tool Parameters are now fully JSON-compatible, allowing AI Agents to automatically select and configure MCP tools without manual intervention.
+Connect your n8n workflows to any MCP server to list, read, and execute tools, prompts, and resources. This package extends the community MCP node with **AI-Agent-native field control**: the agent sets the tool name and parameters directly, so it can pick and configure MCP tools on its own.
 
-MCP is a protocol that enables AI models to interact with external tools and data sources in a standardized way. This node allows you to connect to MCP servers, access resources, execute tools, and use prompts.
+<p align="center">
+  <img src="https://raw.githubusercontent.com/ehpyeon/n8n-nodes-mcp-enhanced/main/assets/mcp-n8n.png" alt="MCP Client node in an n8n workflow" width="720" />
+</p>
 
-[n8n](https://n8n.io/) is a [fair-code licensed](https://docs.n8n.io/reference/license/) workflow automation platform.
+---
 
-## What's Enhanced
+## Table of Contents
 
-### AI Agent Compatibility
-- **Direct Field Control**: AI Agents can now directly control both Tool Name and Tool Parameters fields
-- **Automatic Tool Selection**: Tool Name field now supports AI Agent "let the model define this parameter" feature
-- **Flexible Parameter Formats**: Support multiple input formats for maximum compatibility
-- **Backward Compatibility**: All existing workflows continue to work unchanged
+- [Why this package](#why-this-package)
+- [Quick Start](#quick-start)
+- [Operations](#operations)
+- [Credentials & Transports](#credentials--transports)
+- [Using with AI Agents](#using-with-ai-agents)
+- [Parameter Formats](#parameter-formats)
+- [Environment Variables](#environment-variables)
+- [Compatibility](#compatibility)
+- [Credits](#credits)
+- [License](#license)
 
-### Enhanced Parameter Handling
-The node now supports multiple parameter formats with intelligent parsing:
+---
 
-```json
-// AI Agent Direct Control (v1.0.5+, recommended)
-Tool Name: "search_arxiv"                    // AI Agent sets this directly
-Tool Parameters: {                           // AI Agent sets this directly
-  "query": "artificial intelligence",
-  "max_results": 10
-}
+## Why this package
 
-// Nested format (legacy, still supported)
-Tool Name: ""                                // Can be empty
-Tool Parameters: [{
-  "Tool_Parameters": {
-    "tool_name": "search_arxiv", 
-    "parameters": {
-      "query": "artificial intelligence",
-      "max_results": 10
-    }
-  }
-}]
+This is an enhanced build of the community MCP node, focused on one thing: **making MCP tools first-class citizens for n8n AI Agents.**
 
-// Direct nested format
-Tool Name: ""                                // Can be empty  
-Tool Parameters: {
-  "Tool_Parameters": {
-    "tool_name": "search_arxiv",
-    "parameters": {...}
-  }
-}
+| Capability | What it gives you |
+|------------|-------------------|
+| 🤖 **AI-Agent direct field control** | The agent sets `Tool Name` and `Tool Parameters` itself via n8n's *"let the model define this parameter"* — no manual mapping per tool |
+| 🔀 **Flexible parameter parsing** | Accepts direct, nested, and legacy formats with intelligent fallback |
+| 🌊 **HTTP Streamable transport** | Modern streaming transport in addition to STDIO and SSE |
+| ♻️ **Backward compatible** | Existing workflows built on the standard MCP node keep working unchanged |
+
+> Built on top of the excellent [`n8n-nodes-mcp`](https://github.com/nerding-io/n8n-nodes-mcp) by Jd Fiscus — see [Credits](#credits).
+
+---
+
+## Quick Start
+
+### 1. Install in n8n
+
+**Settings → Community Nodes → Install**, then enter:
+
+```
+n8n-nodes-mcp-enhanced
 ```
 
-### Parsing Priority Logic
-1. **Tool Name field priority**: If Tool Name is set, it takes precedence
-2. **Parameter extraction**: Tool Parameters are parsed as direct parameters
-3. **Nested fallback**: If Tool Name is empty, extract from nested Tool_Parameters structure
-4. **Legacy support**: Maintains compatibility with all previous formats
+Or via npm:
 
-## Installation
-
-Follow the [installation guide](https://docs.n8n.io/integrations/community-nodes/installation/) in the n8n community nodes documentation.
-
-### Install via npm
 ```bash
 npm install n8n-nodes-mcp-enhanced
 ```
 
-### Install in n8n
-1. Go to **Settings** > **Community Nodes**
-2. Enter package name: `n8n-nodes-mcp-enhanced`
-3. Click **Install**
+### 2. Allow tool usage (for AI Agents)
 
-**Important**: Set the `N8N_COMMUNITY_PACKAGES_ALLOW_TOOL_USAGE` environment variable to `true` if you want to use the MCP Client node as a tool in AI Agents.
+Set this environment variable so the node can be used as a tool inside AI Agent nodes:
 
-## Credentials
+```bash
+N8N_COMMUNITY_PACKAGES_ALLOW_TOOL_USAGE=true
+```
 
-The MCP Client node supports three types of credentials to connect to an MCP server:
+### 3. Add credentials and start calling MCP tools
 
-### Command-line Based Transport (STDIO)
-- **Command**: The command to start the MCP server
-- **Arguments**: Optional arguments to pass to the server command  
-- **Environment Variables**: Variables to pass to the server in NAME=VALUE format
+<p align="center">
+  <img src="https://raw.githubusercontent.com/ehpyeon/n8n-nodes-mcp-enhanced/main/assets/operations.png" alt="Available operations" width="360" />
+</p>
 
-### HTTP Streamable Transport (Recommended)
-- **HTTP Streamable URL**: The HTTP endpoint that supports streaming responses
-- **Additional Headers**: Optional headers to send with requests
-
-### Server-Sent Events (SSE) Transport (Legacy)
-- **SSE URL**: The URL of the SSE endpoint
-- **Messages Post Endpoint**: Optional custom endpoint for posting messages
-- **Additional Headers**: Optional headers to send with requests
+---
 
 ## Operations
 
-- **Execute Tool** - Execute a specific tool with parameters (Enhanced for AI Agents)
-- **Get Prompt** - Get a specific prompt template
-- **List Prompts** - Get a list of available prompts
-- **List Resources** - Get a list of available resources from the MCP server
-- **List Tools** - Get a list of available tools
-- **Read Resource** - Read a specific resource by URI
+| Operation | Description |
+|-----------|-------------|
+| **Execute Tool** | Execute a specific tool with parameters (enhanced for AI Agents) |
+| **List Tools** | Get the list of tools exposed by the MCP server |
+| **Get Prompt** | Retrieve a specific prompt template |
+| **List Prompts** | List available prompts |
+| **Read Resource** | Read a specific resource by URI |
+| **List Resources** | List available resources |
+
+<p align="center">
+  <img src="https://raw.githubusercontent.com/ehpyeon/n8n-nodes-mcp-enhanced/main/assets/list-tools.png" alt="List Tools result" width="380" />
+  &nbsp;&nbsp;
+  <img src="https://raw.githubusercontent.com/ehpyeon/n8n-nodes-mcp-enhanced/main/assets/execute-tool-result.png" alt="Execute Tool result" width="380" />
+</p>
+
+---
+
+## Credentials & Transports
+
+The MCP Client node supports three transport types.
+
+<p align="center">
+  <img src="https://raw.githubusercontent.com/ehpyeon/n8n-nodes-mcp-enhanced/main/assets/credentials.png" alt="Credential configuration" width="420" />
+</p>
+
+### HTTP Streamable (recommended)
+- **HTTP Streamable URL** — endpoint that supports streaming responses
+- **Additional Headers** — optional headers per request
+
+### Command-line / STDIO
+- **Command** — command to start the MCP server
+- **Arguments** — optional arguments
+- **Environment Variables** — `NAME=VALUE` pairs passed to the server
+
+### Server-Sent Events (SSE, legacy)
+- **SSE URL** — the SSE endpoint
+- **Messages Post Endpoint** — optional custom post endpoint
+- **Additional Headers** — optional headers
+
+<p align="center">
+  <img src="https://raw.githubusercontent.com/ehpyeon/n8n-nodes-mcp-enhanced/main/assets/credentials-envs.png" alt="Environment variable credentials" width="420" />
+</p>
+
+---
 
 ## Using with AI Agents
 
-### Enable Tool Usage
-Set environment variable:
-```bash
-export N8N_COMMUNITY_PACKAGES_ALLOW_TOOL_USAGE=true
+1. Add the **MCP Client** node to your workflow and configure credentials.
+2. In the **AI Agent** node, enable the MCP Client as a tool.
+3. The agent automatically controls both `Tool Name` and `Tool Parameters`.
+
+**Example prompt:**
+
 ```
-
-### AI Agent Integration
-1. Add MCP Client node to your workflow
-2. Configure credentials for your MCP server
-3. In AI Agent node, enable MCP Client as a tool
-4. AI Agent will automatically control both Tool Name and Tool Parameters fields
-
-### v1.0.5+ Enhanced AI Agent Experience
-With the latest improvements, AI Agents can now:
-- **Directly set Tool Name**: "let the model define this parameter" option available
-- **Directly set Tool Parameters**: Full control over parameter structure
-- **Intelligent parsing**: Automatic handling of different input formats
-- **Better UX**: Cleaner separation between tool selection and parameters
-
-### Example AI Agent Prompt
-```
-Search for recent papers about "transformer architecture" using arXiv, 
+Search arXiv for recent papers on "transformer architecture",
 then summarize the top 3 results.
 ```
 
-The AI Agent will automatically:
-1. Set Tool Name to "search_arxiv" (directly in Tool Name field)
-2. Set Tool Parameters to {"query": "transformer architecture", "max_results": 3}
-3. Execute the search with proper MCP protocol handling
-4. Process and return results
+The agent will, on its own:
+1. Set `Tool Name` → `search_arxiv`
+2. Set `Tool Parameters` → `{"query": "transformer architecture", "max_results": 3}`
+3. Execute via the MCP protocol and return parsed results
+
+<p align="center">
+  <img src="https://raw.githubusercontent.com/ehpyeon/n8n-nodes-mcp-enhanced/main/assets/brave-search-example.png" alt="AI Agent using MCP tools" width="640" />
+</p>
+
+---
+
+## Parameter Formats
+
+The node parses parameters with the following priority: **Tool Name field → direct parameters → nested fallback → legacy**.
+
+```jsonc
+// 1. AI Agent direct control (v1.0.5+, recommended)
+Tool Name: "search_arxiv"
+Tool Parameters: { "query": "artificial intelligence", "max_results": 10 }
+
+// 2. Nested format (legacy, still supported)
+Tool Name: ""
+Tool Parameters: [{
+  "Tool_Parameters": {
+    "tool_name": "search_arxiv",
+    "parameters": { "query": "artificial intelligence", "max_results": 10 }
+  }
+}]
+```
+
+If `Tool Name` is set it always takes precedence; otherwise the node extracts the tool from the nested `Tool_Parameters` structure.
+
+---
 
 ## Environment Variables
 
-Support for Docker environment variables with `MCP_` prefix:
+Docker environment variables prefixed with `MCP_` are passed through to MCP servers:
 
 ```yaml
-version: '3'
 services:
   n8n:
     image: n8nio/n8n
@@ -148,24 +185,33 @@ services:
       - N8N_COMMUNITY_PACKAGES_ALLOW_TOOL_USAGE=true
 ```
 
+<p align="center">
+  <img src="https://raw.githubusercontent.com/ehpyeon/n8n-nodes-mcp-enhanced/main/assets/multi-server-example.png" alt="Multiple MCP servers in one workflow" width="640" />
+</p>
+
+---
+
 ## Compatibility
 
-- Requires n8n version 1.0.0 or later
-- Compatible with MCP Protocol version 1.0.0 or later
-- Supports STDIO, HTTP Streamable, and SSE transports
-- Fully backward compatible with existing workflows
+- Requires **n8n 1.0.0+**
+- MCP protocol **1.0.0+**
+- Transports: STDIO, HTTP Streamable, SSE
+- Fully backward compatible with existing MCP-node workflows
 
-## Original Project
+---
 
-This is an enhanced version based on [n8n-nodes-mcp](https://github.com/nerding-io/n8n-nodes-mcp) by Jd Fiscus.
+## Credits
+
+This package is an enhanced version of [**n8n-nodes-mcp**](https://github.com/nerding-io/n8n-nodes-mcp) by **Jd Fiscus ([@nerding-io](https://github.com/nerding-io))**. Huge thanks to the original author and contributors — this build adds AI-Agent-native field control on top of their foundation.
+
+- [n8n community nodes documentation](https://docs.n8n.io/integrations/community-nodes/)
+- [Model Context Protocol documentation](https://modelcontextprotocol.io/docs/)
+- [MCP TypeScript SDK](https://github.com/modelcontextprotocol/typescript-sdk)
+
+## Contributing
+
+Issues and PRs are welcome. If this node is useful to you, a ⭐ on the [repo](https://github.com/ehpyeon/n8n-nodes-mcp-enhanced) helps others find it.
 
 ## License
 
-MIT License - See [LICENSE.md](LICENSE.md) for details.
-
-## Resources
-
-* [n8n community nodes documentation](https://docs.n8n.io/integrations/community-nodes/)
-* [Model Context Protocol Documentation](https://modelcontextprotocol.io/docs/)
-* [MCP TypeScript SDK](https://github.com/modelcontextprotocol/typescript-sdk)
-* [Original n8n-nodes-mcp project](https://github.com/nerding-io/n8n-nodes-mcp)
+[MIT](LICENSE.md) © Euihyeon Pyeon

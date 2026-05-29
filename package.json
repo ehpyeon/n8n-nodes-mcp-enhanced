@@ -14,7 +14,7 @@
 		"enhanced"
 	],
 	"license": "MIT",
-	"homepage": "",
+	"homepage": "https://github.com/ehpyeon/n8n-nodes-mcp-enhanced#readme",
 	"author": {
 		"name": "Euihyeon Pyeon",
 		"email": "euihyeon.pyeon@gmail.com"
@@ -22,6 +22,9 @@
 	"repository": {
 		"type": "git",
 		"url": "https://github.com/ehpyeon/n8n-nodes-mcp-enhanced.git"
+	},
+	"bugs": {
+		"url": "https://github.com/ehpyeon/n8n-nodes-mcp-enhanced/issues"
 	},
 	"main": "index.js",
 	"scripts": {
